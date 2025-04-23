@@ -294,7 +294,7 @@ export const middleList = [
         _id: "01",
         listData: [
           "Careers",
-          "BLogs",
+          "Blogs",
           "About Amazon",
           "Investor Relations",
           "Amazon Devices",

@@ -1,11 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import { resetCart, placeOrder } from "../redux/amazonSlice";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
 import { useSelector } from "react-redux";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
+
 const CustomerDetails = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -15,6 +15,7 @@ const CustomerDetails = () => {
   const [district, setDistrict] = useState("");
   const [landmark, setLandmark] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -53,7 +54,6 @@ const CustomerDetails = () => {
 
     try {
       const token = localStorage.getItem("token");
-      // console.log("Token:", localStorage.getItem("token"));
 
       await axios.post("http://localhost:3000/api/orders", orderData, {
         headers: {
@@ -63,23 +63,27 @@ const CustomerDetails = () => {
 
       dispatch(placeOrder(orderData));
       dispatch(resetCart());
-      navigate("/orders");
+      setTimeout(() => {
+        navigate("/orders");
+      }, 1500);
+
+      toast.success("Order Placed Successfully", {
+        position: "top-center",
+        autoClose: 1000,
+        hideProgressBar: true,
+        icon: false,
+        closeOnClick: false,
+        closeButton: false,
+        pauseOnHover: false,
+        draggable: true,
+        theme: "light",
+      });
     } catch (error) {
       console.error("Error placing order:", error);
       alert("Failed to place order.");
     }
   };
-  toast.success("Account created Successfully!", {
-    position: "top-center",
-    autoClose: "1000",
-    hideProgressBar: true,
-    icon: false,
-    closeOnClick: false,
-    closeButton: false,
-    pauseOnHover: false,
-    draggable: true,
-    theme: "light",
-  });
+
   return (
     <div className="w-full flex justify-center items-center bg-gray-100 p-4">
       <div className="relative w-full md:w-4/5 lg:w-3/5 mt-4">
