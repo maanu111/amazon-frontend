@@ -1,14 +1,24 @@
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const AccessControlList = () => {
   const [users, setUsers] = useState([]);
-  //
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [role, setRole] = useState(null);
 
-  //
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  useEffect(() => {
+    if (user && user.role === "superadmin") {
+      setIsLoggedIn(true);
+      setRole(user.role);
+      fetchUsers();
+    }
+  }, [user]);
 
   const fetchUsers = async () => {
     try {
@@ -19,40 +29,213 @@ const AccessControlList = () => {
     }
   };
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const handleLogin = async () => {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/api/users/login",
+        {
+          email,
+          password,
+        }
+      );
+      const { token, user } = response.data;
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      setIsLoggedIn(true);
+      setRole(user.role);
+      fetchUsers();
+      toast.success("Login successful");
+    } catch (error) {
+      toast.error("Login failed. Please check your credentials.");
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setIsLoggedIn(false);
+    setRole(null);
+  };
+
+  if (!isLoggedIn) {
+    return (
+      <div className="flex justify-center items-center h-screen text-xl">
+        <div className="p-4 rounded shadow-md w-96 bg-white">
+          <h2 className="text-lg font-medium text-center mb-4">
+            Superadmin Login
+          </h2>
+          <input
+            type="email"
+            className="w-full mb-4 p-2 border border-gray-300 rounded"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            type="password"
+            className="w-full mb-4 p-2 border border-gray-300 rounded"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button
+            onClick={handleLogin}
+            className="w-full p-2 bg-blue-500 text-white rounded"
+          >
+            Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (role !== "superadmin") {
+    return (
+      <div className="flex justify-center items-center h-screen text-xl text-red-600">
+        Access Denied: Admins Only
+      </div>
+    );
+  }
+
   return (
     <div>
-      <div className="flex items-center bg-[#232F3E] h-[50px] px-4">
-        <h2 className="text-lg font-medium text-white ml-4">
-          Access Control List
-        </h2>
-      </div>
-      <div className="w-full justify-center mx-auto">
-        <div className="p-4 rounded shadow-sm">
-          <table className="w-full rounded-lg bg-gray-200 border-collapse">
-            <thead>
-              <tr className="bg-gray-300">
-                <th className="p-2 text-sm text-center">User</th>
-                <th className="p-2 text-sm text-center">Roles</th>
+      <div>
+        <div className="flex items-center bg-[#232F3E] h-[50px] px-4">
+          <h2 className="text-lg font-medium text-white ml-4">
+            Access Control List
+          </h2>
+          <button
+            onClick={handleLogout}
+            className="ml-auto p-2 text-white bg-red-500 rounded"
+          >
+            Logout
+          </button>
+        </div>
+        <div className="w-full justify-center mx-auto">
+          <div className="p-4 rounded shadow-sm">
+            <table className="w-full rounded-lg bg-gray-200 border-collapse hidden md:table">
+              <thead>
+                <tr className="bg-gray-300">
+                  <th className="p-2 text-sm text-center">User</th>
+                  <th className="p-2 text-sm text-center">Roles</th>
+                  <th className="p-2 text-sm text-center">Permissions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users
+                  .filter(
+                    (user) => user.role === "admin" || user.role === "editor"
+                  )
+                  .map((user) => (
+                    <tr key={user._id}>
+                      <td className="py-3 text-sm text-center capitalize">
+                        {user.name}
+                      </td>
+                      <td className="p-2 text-sm text-center">{user.role}</td>
+                      <td className="p-2 text-sm capitalize text-center">
+                        <div className="flex flex-wrap gap-6 justify-center">
+                          {[
+                            "update Order",
+                            "add Product",
+                            "inactive Product",
+                            "delete Product",
+                          ].map((permission) => (
+                            <label
+                              key={permission}
+                              className="flex items-center text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={user.permissions?.includes(permission)}
+                                onChange={async (e) => {
+                                  try {
+                                    const updatedPermissions = e.target.checked
+                                      ? [
+                                          ...(user.permissions || []),
+                                          permission,
+                                        ]
+                                      : user.permissions.filter(
+                                          (perm) => perm !== permission
+                                        );
+                                    setUsers((prev) =>
+                                      prev.map((u) =>
+                                        u._id === user._id
+                                          ? {
+                                              ...u,
+                                              permissions: updatedPermissions,
+                                            }
+                                          : u
+                                      )
+                                    );
+                                    localStorage.setItem(
+                                      "permissions",
+                                      JSON.stringify(updatedPermissions)
+                                    );
+                                    const loggedInUser = JSON.parse(
+                                      localStorage.getItem("user")
+                                    );
+                                    if (loggedInUser._id === user._id) {
+                                      const updatedUser = {
+                                        ...loggedInUser,
+                                        permissions: updatedPermissions,
+                                      };
+                                      localStorage.setItem(
+                                        "user",
+                                        JSON.stringify(updatedUser)
+                                      );
+                                    }
 
-                <th className="p-2 text-sm text-center">Permissions</th>
-              </tr>
-            </thead>
-            <tbody>
+                                    await axios.put(
+                                      `http://localhost:3000/api/users/${user._id}`,
+                                      { permissions: updatedPermissions },
+                                      {
+                                        headers: {
+                                          Authorization: `Bearer ${localStorage.getItem(
+                                            "token"
+                                          )}`,
+                                        },
+                                      }
+                                    );
+
+                                    toast.success(
+                                      "Permissions updated successfully!"
+                                    );
+                                  } catch (error) {
+                                    toast.error(
+                                      "Failed to update permissions."
+                                    );
+                                  }
+                                }}
+                                className="mr-2"
+                              />
+                              {permission}
+                            </label>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+            <div className="block md:hidden">
               {users
                 .filter(
                   (user) => user.role === "admin" || user.role === "editor"
                 )
                 .map((user) => (
-                  <tr key={user._id}>
-                    <td className=" py-3 text-sm text-center capitalize">
-                      {user.name}
-                    </td>
-                    <td className="p-2 text-sm text-center">{user.role}</td>
-                    <td className="p-2 text-sm capitalize text-center">
-                      <div className="flex flex-wrap gap-6 justify-center">
+                  <div
+                    key={user._id}
+                    className="mb-4 p-4 bg-gray-200 rounded-lg shadow-sm"
+                  >
+                    <div className="mb-2">
+                      <strong>User:</strong> {user.name}
+                    </div>
+                    <div className="mb-2">
+                      <strong>Role:</strong> {user.role}
+                    </div>
+                    <div>
+                      <strong>Permissions:</strong>
+                      <div className="flex flex-wrap gap-4 mt-2">
                         {[
                           "update Order",
                           "add Product",
@@ -73,18 +256,22 @@ const AccessControlList = () => {
                                     : user.permissions.filter(
                                         (perm) => perm !== permission
                                       );
-                                  console.log(`User ID: ${user._id}`);
-                                  console.log(
-                                    `Old permissions: ${user.permissions.join(
-                                      ", "
-                                    )}`
-                                  );
-                                  console.log(
-                                    `Updated permissions: ${updatedPermissions.join(
-                                      ", "
-                                    )}`
-                                  );
 
+                                  const updatedUser = {
+                                    ...user,
+                                    permissions: updatedPermissions,
+                                  };
+
+                                  setUsers((prev) =>
+                                    prev.map((u) =>
+                                      u._id === user._id
+                                        ? {
+                                            ...u,
+                                            permissions: updatedPermissions,
+                                          }
+                                        : u
+                                    )
+                                  );
                                   await axios.put(
                                     `http://localhost:3000/api/users/${user._id}`,
                                     { permissions: updatedPermissions },
@@ -96,34 +283,16 @@ const AccessControlList = () => {
                                       },
                                     }
                                   );
-                                  setUsers((prev) =>
-                                    prev.map((u) =>
-                                      u._id === user._id
-                                        ? {
-                                            ...u,
-                                            permissions: updatedPermissions,
-                                          }
-                                        : u
-                                    )
-                                  );
 
-                                  //
                                   const loggedInUser = JSON.parse(
                                     localStorage.getItem("user")
                                   );
                                   if (loggedInUser._id === user._id) {
-                                    const updateUser = {
-                                      ...loggedInUser,
-                                      permissions: updatedPermissions,
-                                    };
                                     localStorage.setItem(
                                       "user",
-                                      JSON.stringify(updateUser)
+                                      JSON.stringify(updatedUser)
                                     );
                                   }
-                                  // console.log(updatedPermissions);
-
-                                  //
 
                                   toast.success(
                                     "Permissions updated successfully!"
@@ -134,28 +303,30 @@ const AccessControlList = () => {
                               }}
                               className="mr-2"
                             />
+
                             {permission}
                           </label>
                         ))}
                       </div>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
+        <ToastContainer
+          position="top-center"
+          autoClose={100}
+          hideProgressBar={true}
+          icon={false}
+          closeButton={false}
+          newestOnTop={true}
+          closeOnClick
+          rtl={false}
+          draggable
+          className="text-xs sm:text-sm md:text-base"
+        />
       </div>
-      <ToastContainer
-        position="top-center"
-        autoClose={100}
-        hideProgressBar={true}
-        icon={false}
-        closeButton={false}
-        newestOnTop={true}
-        closeOnClick
-        rtl={false}
-        draggable
-      />
     </div>
   );
 };

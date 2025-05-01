@@ -7,6 +7,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useDispatch } from "react-redux";
 import { setUser } from "../redux/amazonSlice";
+import jwt_decode from "jwt-decode";
 //
 function SignIn() {
   const [email, setEmail] = useState("");
@@ -44,19 +45,47 @@ function SignIn() {
           password,
         }
       );
-      console.log("Login successful:", response.data);
-      const token = response.data.token;
 
-      localStorage.setItem("token", token);
-      const user = response.data.user;
-      localStorage.setItem("user", JSON.stringify(user));
-      dispatch(setUser(user));
+      const { user, token } = response.data;
+      console.log("User from backend:", user);
       //
+
+      if (user?.permissions) {
+        localStorage.setItem("permissions", JSON.stringify(user.permissions));
+      } else {
+        console.warn("Permissions missing from backend response");
+      }
+      //
+      //
+      localStorage.setItem("user", JSON.stringify(user));
+      //
+      console.log("updated permissions", user.permissions);
+      localStorage.setItem("token", token);
+      //
+      const decoded = jwt_decode(token);
+      console.log("magic", decoded);
+      const expTime = decoded.exp * 1000;
+      const currentTime = Date.now();
+      const timeUntilExpiry = expTime - currentTime;
+      //
+      console.log("Time until expiry:", timeUntilExpiry);
+      //
+      setTimeout(() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        dispatch(setUser(null));
+      }, timeUntilExpiry);
+      //
+      dispatch(setUser(user));
+
+      //
+
       toast.success("Welcome back!", {
         position: "top-center",
         autoClose: 2000,
         hideProgressBar: true,
         icon: false,
+        isLoading: true,
         closeOnClick: false,
         closeButton: false,
         pauseOnHover: false,
@@ -103,10 +132,15 @@ function SignIn() {
                   </p>
                 )}
               </div>
+              <Link to="/otplogin">
+                <p className="hover:underline text-right text-xs text-blue-600">
+                  Login with OTP
+                </p>
+              </Link>
               <div className="flex flex-col gap-2">
                 <p className="text-sm font-medium">Password</p>
                 <input
-                  className="w-full lowercase  py-1 border border-zinc-400 px-2 text-base rounded-sm outline-none focus-within:border-[#e77600] focus-within:shadow-amazonInput duration-75"
+                  className="w-full py-1 border border-zinc-400 px-2 text-base rounded-sm outline-none focus-within:border-[#e77600] focus-within:shadow-amazonInput duration-75"
                   type="password"
                   onChange={handlePassword}
                   value={password}

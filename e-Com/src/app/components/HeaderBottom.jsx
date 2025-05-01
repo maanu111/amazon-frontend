@@ -1,20 +1,24 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import SideNavContent from "./SideNavContent";
 import { motion } from "framer-motion";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setUser } from "../../redux/amazonSlice";
 //
 const HeaderBottom = () => {
   const user = useSelector((state) => state.amazon.userinfo);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [sidebar, setSideBar] = useState(false);
   const ref = useRef();
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("persist:root");
-    window.location.href = "/signin";
+    localStorage.clear();
+    dispatch(setUser(null));
+    navigate("/signin");
   };
   return (
     <div className="w-full px-4 h-[36px] bg-amazon_light text-white flex z-50 items-center">

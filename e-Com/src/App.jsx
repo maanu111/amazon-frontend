@@ -1,4 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+
 import {
   createBrowserRouter,
   createRoutesFromElements,
@@ -18,7 +20,9 @@ import CustomerDetails from "./Pages/CustomerDetails";
 import Orders from "./Pages/Orders";
 import AdminPanel from "./Pages/AdminPanel";
 import AccessControlList from "./Pages/AccessControlList";
-
+import OtpLogin from "./Pages/OtpLogin";
+import jwt_decode from "jwt-decode";
+import { setUser } from "./redux/amazonSlice";
 const Layout = () => (
   <>
     <Header />
@@ -29,16 +33,20 @@ const Layout = () => (
 );
 
 function App() {
+  const dispatch = useDispatch();
   useEffect(() => {
-    const logoutTimer = setTimeout(() => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("persist:root");
-    }, 2 * 60 * 60 * 1000);
+    const token = localStorage.getItem("token");
 
-    return () => clearTimeout(logoutTimer);
+    if (token) {
+      const decoded = jwt_decode(token);
+      const currentTime = Date.now() / 1000;
+
+      if (decoded.exp < currentTime) {
+        localStorage.clear();
+        dispatch(setUser(null));
+      }
+    }
   }, []);
-  //
   const router = createBrowserRouter(
     createRoutesFromElements(
       <>
@@ -50,6 +58,7 @@ function App() {
         </Route>
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/signin" element={<SignIn />} />
+        <Route path="/otplogin" element={<OtpLogin />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/acl" element={<AccessControlList />} />
       </>

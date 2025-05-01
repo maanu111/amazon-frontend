@@ -17,8 +17,10 @@ const AdminPanel = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [users, setUsers] = useState([]);
   const user = JSON.parse(localStorage.getItem("user"));
-  const permissions = user?.permissions || [];
-  //
+  const permissions =
+    user?.role === "SuperAdmin"
+      ? ["add Product", "update Order", "inactive Product", "delete Product"]
+      : JSON.parse(localStorage.getItem("permissions")) || [];
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -265,22 +267,22 @@ const AdminPanel = () => {
                 Track Your Order
               </li>
             )}
-            {permissions.includes("inactive Product") ||
-              (permissions.includes("delete Product") && (
-                <li
-                  className={`p-2 cursor-pointer rounded mt-2 text-sm ${
-                    activeSection === "productLifecycle"
-                      ? "bg-gray-300 text-gray-800"
-                      : "text-gray-600"
-                  }`}
-                  onClick={() => {
-                    setActiveSection("productLifecycle");
-                    setIsSidebarOpen(false);
-                  }}
-                >
-                  Product Lifecycle Management
-                </li>
-              ))}
+            {(permissions.includes("inactive Product") ||
+              permissions.includes("delete Product")) && (
+              <li
+                className={`p-2 cursor-pointer rounded mt-2 text-sm ${
+                  activeSection === "productLifecycle"
+                    ? "bg-gray-300 text-gray-800"
+                    : "text-gray-600"
+                }`}
+                onClick={() => {
+                  setActiveSection("productLifecycle");
+                  setIsSidebarOpen(false);
+                }}
+              >
+                Product Lifecycle Management
+              </li>
+            )}
 
             <li
               className={`cursor-pointer italic p-4  text-gray-600  text-sm hover:underline flex justify-end  ${
@@ -522,7 +524,7 @@ const AdminPanel = () => {
                         <div className="flex flex-col md:flex-row items-center md:justify-start gap-4">
                           {product.image && (
                             <img
-                              className="w-16 h-20 rounded-md"
+                              className="w-16 h-20 object-contain rounded-md"
                               src={
                                 product.image.startsWith("/uploads")
                                   ? `http://localhost:3000${product.image}`

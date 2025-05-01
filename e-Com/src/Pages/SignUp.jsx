@@ -95,7 +95,7 @@ function SignUp() {
       });
       setTimeout(() => {
         navigate("/SignIn");
-      }, 3000);
+      }, 2000);
       setName("");
       setEmail("");
       setPassword("");
