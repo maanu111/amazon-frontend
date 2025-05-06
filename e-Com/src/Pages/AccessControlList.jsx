@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { ToastContainer, toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const AccessControlList = () => {
@@ -9,80 +9,146 @@ const AccessControlList = () => {
   const [password, setPassword] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [role, setRole] = useState(null);
-
-  const user = JSON.parse(localStorage.getItem("user"));
+  const [loading, setLoading] = useState(false); // New loading state
 
   useEffect(() => {
-    if (user && user.role === "superadmin") {
+    const aclUserData = JSON.parse(localStorage.getItem("aclUserData"));
+    if (aclUserData && aclUserData.role === "superadmin") {
       setIsLoggedIn(true);
-      setRole(user.role);
+      setRole(aclUserData.role);
       fetchUsers();
     }
-  }, [user]);
+  }, []);
 
   const fetchUsers = async () => {
+    setLoading(true);
     try {
       const response = await axios.get("http://localhost:3000/api/users");
       setUsers(response.data);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      toast.error("Error fetching users. Please try again later.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogin = async () => {
+    setLoading(true);
     try {
       const response = await axios.post(
         "http://localhost:3000/api/users/login",
-        {
-          email,
-          password,
-        }
+        { email, password }
       );
       const { token, user } = response.data;
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("aclToken", token);
+      localStorage.setItem("aclUserData", JSON.stringify(user));
       setIsLoggedIn(true);
       setRole(user.role);
       fetchUsers();
-      toast.success("Login successful");
+      setEmail("");
+      setPassword("");
     } catch (error) {
       toast.error("Login failed. Please check your credentials.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem("aclToken");
+    localStorage.removeItem("aclUserData");
     setIsLoggedIn(false);
     setRole(null);
   };
+
+  const handlePermissionChange = async (user, permission, isChecked) => {
+    try {
+      const updatedPermissions = isChecked
+        ? [...(user.permissions || []), permission]
+        : user.permissions.filter((perm) => perm !== permission);
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u._id === user._id ? { ...u, permissions: updatedPermissions } : u
+        )
+      );
+      localStorage.setItem("permissions", JSON.stringify(updatedPermissions));
+
+      const loggedInUser = JSON.parse(localStorage.getItem("aclUserData"));
+      if (loggedInUser._id === user._id) {
+        const updatedUser = {
+          ...loggedInUser,
+          permissions: updatedPermissions,
+        };
+        localStorage.setItem("aclUserData", JSON.stringify(updatedUser));
+      }
+
+      await axios.put(
+        `http://localhost:3000/api/users/${user._id}`,
+        { permissions: updatedPermissions },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("aclToken")}`,
+          },
+        }
+      );
+
+      toast.success("Permissions updated successfully!");
+    } catch (error) {
+      toast.error("Failed to update permissions.");
+    }
+  };
+
+  const PermissionCheckboxes = ({ user }) => (
+    <div className="flex flex-wrap gap-6 justify-center">
+      {[
+        "update Order",
+        "add Product",
+        "inactive Product",
+        "delete Product",
+      ].map((permission) => (
+        <label key={permission} className="flex items-center text-sm">
+          <input
+            type="checkbox"
+            checked={user.permissions?.includes(permission)}
+            onChange={(e) =>
+              handlePermissionChange(user, permission, e.target.checked)
+            }
+            className="mr-2"
+          />
+          {permission}
+        </label>
+      ))}
+    </div>
+  );
 
   if (!isLoggedIn) {
     return (
       <div className="flex justify-center items-center h-screen text-xl">
         <div className="p-4 rounded shadow-md w-96 bg-white">
           <h2 className="text-lg font-medium text-center mb-4">
-            Superadmin Login
+            Super-Admin Login
           </h2>
           <input
             type="email"
-            className="w-full mb-4 p-2 border border-gray-300 rounded"
+            className="w-full mb-4 p-2 border text-sm border-gray-300 outline-none rounded"
             placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <input
             type="password"
-            className="w-full mb-4 p-2 border border-gray-300 rounded"
+            className="w-full mb-4 p-2 border text-sm border-gray-300 outline-none rounded"
             placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
           <button
             onClick={handleLogin}
-            className="w-full p-2 bg-blue-500 text-white rounded"
+            className="w-full p-2 text-sm bg-blue-500 active:bg-blue-400 text-white rounded"
+            disabled={loading} // Disable during loading
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </button>
         </div>
       </div>
@@ -92,7 +158,7 @@ const AccessControlList = () => {
   if (role !== "superadmin") {
     return (
       <div className="flex justify-center items-center h-screen text-xl text-red-600">
-        Access Denied: Admins Only
+        Access Denied: Super-Admins Only
       </div>
     );
   }
@@ -133,85 +199,7 @@ const AccessControlList = () => {
                       </td>
                       <td className="p-2 text-sm text-center">{user.role}</td>
                       <td className="p-2 text-sm capitalize text-center">
-                        <div className="flex flex-wrap gap-6 justify-center">
-                          {[
-                            "update Order",
-                            "add Product",
-                            "inactive Product",
-                            "delete Product",
-                          ].map((permission) => (
-                            <label
-                              key={permission}
-                              className="flex items-center text-sm"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={user.permissions?.includes(permission)}
-                                onChange={async (e) => {
-                                  try {
-                                    const updatedPermissions = e.target.checked
-                                      ? [
-                                          ...(user.permissions || []),
-                                          permission,
-                                        ]
-                                      : user.permissions.filter(
-                                          (perm) => perm !== permission
-                                        );
-                                    setUsers((prev) =>
-                                      prev.map((u) =>
-                                        u._id === user._id
-                                          ? {
-                                              ...u,
-                                              permissions: updatedPermissions,
-                                            }
-                                          : u
-                                      )
-                                    );
-                                    localStorage.setItem(
-                                      "permissions",
-                                      JSON.stringify(updatedPermissions)
-                                    );
-                                    const loggedInUser = JSON.parse(
-                                      localStorage.getItem("user")
-                                    );
-                                    if (loggedInUser._id === user._id) {
-                                      const updatedUser = {
-                                        ...loggedInUser,
-                                        permissions: updatedPermissions,
-                                      };
-                                      localStorage.setItem(
-                                        "user",
-                                        JSON.stringify(updatedUser)
-                                      );
-                                    }
-
-                                    await axios.put(
-                                      `http://localhost:3000/api/users/${user._id}`,
-                                      { permissions: updatedPermissions },
-                                      {
-                                        headers: {
-                                          Authorization: `Bearer ${localStorage.getItem(
-                                            "token"
-                                          )}`,
-                                        },
-                                      }
-                                    );
-
-                                    toast.success(
-                                      "Permissions updated successfully!"
-                                    );
-                                  } catch (error) {
-                                    toast.error(
-                                      "Failed to update permissions."
-                                    );
-                                  }
-                                }}
-                                className="mr-2"
-                              />
-                              {permission}
-                            </label>
-                          ))}
-                        </div>
+                        <PermissionCheckboxes user={user} />
                       </td>
                     </tr>
                   ))}
@@ -235,98 +223,15 @@ const AccessControlList = () => {
                     </div>
                     <div>
                       <strong>Permissions:</strong>
-                      <div className="flex flex-wrap gap-4 mt-2">
-                        {[
-                          "update Order",
-                          "add Product",
-                          "inactive Product",
-                          "delete Product",
-                        ].map((permission) => (
-                          <label
-                            key={permission}
-                            className="flex items-center text-sm"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={user.permissions?.includes(permission)}
-                              onChange={async (e) => {
-                                try {
-                                  const updatedPermissions = e.target.checked
-                                    ? [...(user.permissions || []), permission]
-                                    : user.permissions.filter(
-                                        (perm) => perm !== permission
-                                      );
-
-                                  const updatedUser = {
-                                    ...user,
-                                    permissions: updatedPermissions,
-                                  };
-
-                                  setUsers((prev) =>
-                                    prev.map((u) =>
-                                      u._id === user._id
-                                        ? {
-                                            ...u,
-                                            permissions: updatedPermissions,
-                                          }
-                                        : u
-                                    )
-                                  );
-                                  await axios.put(
-                                    `http://localhost:3000/api/users/${user._id}`,
-                                    { permissions: updatedPermissions },
-                                    {
-                                      headers: {
-                                        Authorization: `Bearer ${localStorage.getItem(
-                                          "token"
-                                        )}`,
-                                      },
-                                    }
-                                  );
-
-                                  const loggedInUser = JSON.parse(
-                                    localStorage.getItem("user")
-                                  );
-                                  if (loggedInUser._id === user._id) {
-                                    localStorage.setItem(
-                                      "user",
-                                      JSON.stringify(updatedUser)
-                                    );
-                                  }
-
-                                  toast.success(
-                                    "Permissions updated successfully!"
-                                  );
-                                } catch (error) {
-                                  toast.error("Failed to update permissions.");
-                                }
-                              }}
-                              className="mr-2"
-                            />
-
-                            {permission}
-                          </label>
-                        ))}
-                      </div>
+                      <PermissionCheckboxes user={user} />
                     </div>
                   </div>
                 ))}
             </div>
           </div>
         </div>
-        <ToastContainer
-          position="top-center"
-          autoClose={100}
-          hideProgressBar={true}
-          icon={false}
-          closeButton={false}
-          newestOnTop={true}
-          closeOnClick
-          rtl={false}
-          draggable
-          className="text-xs sm:text-sm md:text-base"
-        />
       </div>
+      <ToastContainer />
     </div>
   );
 };

@@ -23,6 +23,9 @@ import AccessControlList from "./Pages/AccessControlList";
 import OtpLogin from "./Pages/OtpLogin";
 import jwt_decode from "jwt-decode";
 import { setUser } from "./redux/amazonSlice";
+import ForgotPassword from "./Pages/ForgotPassword";
+import ResetPassword from "./Pages/ResetPassword";
+import CustomerAnalytics from "./Pages/CustomerAnalytics";
 const Layout = () => (
   <>
     <Header />
@@ -58,9 +61,12 @@ function App() {
         </Route>
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/signin" element={<SignIn />} />
+        <Route path="/forgotpassword" element={<ForgotPassword />} />
+        <Route path="/resetpassword" element={<ResetPassword />} />
         <Route path="/otplogin" element={<OtpLogin />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/acl" element={<AccessControlList />} />
+        <Route path="/customeranalytics" element={<CustomerAnalytics />} />
       </>
     )
   );

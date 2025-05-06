@@ -1,4 +1,4 @@
-import React, { useState, useEffect, act, use } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -17,10 +17,15 @@ const AdminPanel = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [users, setUsers] = useState([]);
   const user = JSON.parse(localStorage.getItem("user"));
+  const aclUserData = JSON.parse(localStorage.getItem("aclUserData"));
+  //
   const permissions =
-    user?.role === "SuperAdmin"
+    aclUserData?.role === "superadmin"
       ? ["add Product", "update Order", "inactive Product", "delete Product"]
-      : JSON.parse(localStorage.getItem("permissions")) || [];
+      : user?.role === "admin" || user?.role === "editor"
+      ? JSON.parse(localStorage.getItem("permissions")) || []
+      : [];
+  //
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

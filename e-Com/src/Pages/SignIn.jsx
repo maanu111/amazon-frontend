@@ -14,6 +14,7 @@ function SignIn() {
   const [password, setPassword] = useState("");
   const [errorEmail, setErrorEmail] = useState();
   const [errorPassword, setErrorPassword] = useState();
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
   //
@@ -133,7 +134,7 @@ function SignIn() {
                 )}
               </div>
               <Link to="/otplogin">
-                <p className="hover:underline text-right text-xs text-blue-600">
+                <p className="hover:underline italic text-right text-xs text-blue-600">
                   Login with OTP
                 </p>
               </Link>
@@ -154,7 +155,6 @@ function SignIn() {
                   </p>
                 )}
               </div>
-
               <button
                 onClick={handleLogin}
                 className="w-full py-1.5 text-sm font-normal rounded-full bg-gradient-to-t from-[#f7dfa5] to-[#f0c14b] hover:bg-gradient-to-b border border-zinc-400  active:border-yellow-800 active:shadow-amazonInput   "
@@ -164,6 +164,12 @@ function SignIn() {
 
               {/*  */}
             </div>
+            <Link to="/forgotpassword">
+              {" "}
+              <p className="text-xs text-blue-600 italic text-right mt-2 hover:underline cursor-pointer">
+                Forgot Password ?
+              </p>
+            </Link>
             <ToastContainer />
             <p className="text-xs text-black leading-4 mt-4">
               By Continuing, you agree to Amazon's{" "}

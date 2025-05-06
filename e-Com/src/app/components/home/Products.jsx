@@ -113,7 +113,7 @@ const Products = () => {
               onClick={() =>
                 dispatch(
                   addToCart({
-                    id: item._id,
+                    id: item._id || item.id,
                     title: item.title,
                     description: item.description,
                     price: item.price,
